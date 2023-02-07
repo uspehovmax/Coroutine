@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">CoroutineStart</string>
+    <string name="download">DOWNLOAD</string>
+    <string name="temperature">Temperature</string>
+    <string name="city">City</string>
+    <string name="loading_temperature_toast">Loading temperature of %s</string>
+</resources>
