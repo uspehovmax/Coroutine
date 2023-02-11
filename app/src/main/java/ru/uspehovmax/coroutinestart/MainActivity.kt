@@ -1,17 +1,20 @@
 package ru.uspehovmax.coroutinestart
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ru.uspehovmax.coroutinestart.databinding.ActivityMainBinding
 
 /**
- * Handler() - класс принимающий на вход объекты Runnable
- * Looper - класс в котором очередь из объектов Runnable
+ * Handler() - класс принимающий на вход объекты Runnable, взаимодействие м/у потоками, передача Message
+ * Looper - класс в котором очередь из объектов Runnable,
  * из Looper передаются объекты в Handler(), кот. запускает ф-ю run
  *
  */
@@ -21,17 +24,72 @@ class MainActivity : AppCompatActivity() {
         ActivityMainBinding.inflate(layoutInflater)
     }
 
-    // 1 вариант работы с главным потоком из порожденного через Handler()
-//    private val handler = Handler()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
-        binding.buttonLoad.setOnClickListener {
-            lifecycleScope.launch {
-                downloadData()
+        with(binding) {
+            buttonLoad.setOnClickListener {
+
+                progress.isVisible = true
+                buttonLoad.isEnabled = false
+/*
+val jobCity = lifecycleScope.launch..
+launch - метод возвращает Job - интерфейс, методы join, cancel, start ..
+Job - интерфейс - ничего не возвращает
+
+val deferredCity: Deferred<String> = lifecycleScope.async
+Deferred - интерфейс, расширяет Job, возвращет <тип>
+async - метод возвращает Deferred - интерфейс, методы await
+ */
+                /* Реализация Job
+                // 1 jobCity
+                val jobCity = lifecycleScope.launch {
+                    val city = downloadCity()
+                    tvLocation.text = city
+                }
+                //2 jobTemp
+                val jobTemp = lifecycleScope.launch {
+                    val temp = downloadTemperature()
+                    tvTemperature.text = temp.toString()
+                }
+                //3
+                lifecycleScope.launch {
+                    jobCity.join()
+                    jobTemp.join()
+                    progress.isVisible = false
+                    buttonLoad.isEnabled = true
+                    Log.d("MSG", "jobCity + jobTemp = join()")
+                }*/
+
+                // Реализация Deferred
+                // 1 deferredCity
+                val deferredCity: Deferred<String> = lifecycleScope.async {
+                    val city = downloadCity()
+                    tvLocation.text = city
+                    city
+                }
+                //2 deferredTemp
+                val deferredTemp: Deferred<Int> = lifecycleScope.async {
+                    val temp = downloadTemperature()
+                    tvTemperature.text = temp.toString()
+                    temp
+                }
+                //3
+                lifecycleScope.launch {
+                    val city = deferredCity.await()
+                    val temp = deferredTemp.await()
+                    progress.isVisible = false
+                    buttonLoad.isEnabled = true
+                    Toast.makeText(
+                        this@MainActivity,
+                        "City $city, Temp: $temp",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    Log.d("MSG", "jobCity + jobTemp = join()")
+                }
             }
         }
+
     }
 
     // ключевое слово suspend - прерывание
@@ -43,11 +101,12 @@ class MainActivity : AppCompatActivity() {
             val city = downloadCity()
             tvLocation.text = city
 
-            val temp = downloadTemperature(city)
+            val temp = downloadTemperature()
             tvTemperature.text = temp.toString()
 
             progress.isVisible = false
             buttonLoad.isEnabled = true
+            Log.d("MSG", "downloadData()")
         }
 
     }
@@ -65,12 +124,12 @@ class MainActivity : AppCompatActivity() {
 //                callback.invoke("Moscow")
 //            }*/
         // 3 вариант корутины
-        delay(2_000)
+        delay(3_000)
         return "Moscow"
     }
 
 
-    private suspend fun downloadTemperature(city: String): Int {
+    private suspend fun downloadTemperature(): Int {
         /*
 // создание отдельного потока для асинхронного выполнения
 //        thread {
@@ -94,12 +153,12 @@ class MainActivity : AppCompatActivity() {
                 callback.invoke(17)
             }
         }*/
-        Toast.makeText(
-            this,
-            getString(R.string.loading_temperature_toast, city),
-            Toast.LENGTH_SHORT
-        ).show()
-        delay(2_000)
+//        Toast.makeText(
+//            this,
+//            getString(R.string.loading_temperature_toast, city),
+//            Toast.LENGTH_SHORT
+//        ).show()
+        delay(5_000)
         return 17
     }
 
